@@ -2,11 +2,11 @@
   <div class="login-container">
     <form @submit.prevent="handleLogin">
       <div class="form-group">
-        <label for="username">Username</label>
+        <label for="username">Email</label>
         <input
           type="text"
-          id="username"
-          v-model="username"
+          id="email"
+          v-model="email"
           class="form-control"
           required
         />
@@ -34,12 +34,12 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
 
 async function handleLogin() {
   const success = await authStore.login({
-    username: username.value,
+    email: email.value,
     password: password.value,
   })
 

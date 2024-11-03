@@ -6,6 +6,11 @@ const authRoutes = require('./routes/authRoutes');
 const { sequelize } = require('./models');
 const app = express();
 
+
+app.get('/', (req, res) => {
+    res.json({ message: 'Hello World!' });
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
