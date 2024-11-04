@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
-    "pinia": "^2.2.4",
+    "pinia": "^2.2.6",
     "vue": "^3.5.12",
     "vue-cal": "^4.10.0",
     "vue-router": "^4.4.5",
