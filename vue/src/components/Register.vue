@@ -2,10 +2,23 @@
   <div class="register-container">
     <h1>Register</h1>
     <p>Create your account</p>
+
+    <!-- Tampilkan pesan error jika ada -->
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
         <label for="name">Name:</label>
-        <input type="text" id="name" v-model="name" required />
+        <input
+          type="text"
+          id="name"
+          v-model="name"
+          required
+          minlength="3"
+          maxlength="30"
+        />
       </div>
       <div class="form-group">
         <label for="email">Email:</label>
@@ -13,25 +26,56 @@
       </div>
       <div class="form-group">
         <label for="password">Password:</label>
-        <input type="password" id="password" v-model="password" required />
+        <input
+          type="password"
+          id="password"
+          v-model="password"
+          required
+          minlength="6"
+        />
       </div>
-      <button type="submit">Register</button>
+      <button type="submit" :disabled="isLoading">
+        {{ isLoading ? 'Registering...' : 'Register' }}
+      </button>
     </form>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const name = ref('')
 const email = ref('')
 const password = ref('')
+const error = ref('')
+const isLoading = ref(false)
 
-const handleSubmit = () => {
-  // Handle registration logic here
-  console.log('Name:', name.value)
-  console.log('Email:', email.value)
-  console.log('Password:', password.value)
+const handleSubmit = async () => {
+  try {
+    isLoading.value = true
+    error.value = ''
+
+    const { success, message } = await authStore.register({
+      name: name.value,
+      email: email.value,
+      password: password.value,
+    })
+
+    if (success) {
+      router.push('/dashboard')
+    } else {
+      error.value = message
+    }
+  } catch (err) {
+    error.value = err.message || 'Registration failed'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -54,6 +98,7 @@ h1 {
 p {
   font-size: 1.2rem;
   text-align: center;
+  margin-bottom: 1.5rem;
 }
 
 .form-group {
@@ -83,7 +128,22 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background-color: #0056b3;
+}
+
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 </style>
