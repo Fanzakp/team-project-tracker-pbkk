@@ -11,8 +11,7 @@ onMounted(async () => {
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <h3>
-      Welcome to the Team Project Tracker! This tool will help you manage and
-      track your team's progress efficiently.
+      Welcome to the Team Project Tracker! This tool will help you manage and track your team's progress efficiently.
     </h3>
   </div>
 </template>

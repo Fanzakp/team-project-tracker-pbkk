@@ -80,6 +80,7 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+
 .register-container {
   max-width: 400px;
   margin: 0 auto;
@@ -120,7 +121,7 @@ input {
 button {
   width: 100%;
   padding: 0.75rem;
-  background-color: #007bff;
+  background-color: #007BFF;
   color: white;
   border: none;
   border-radius: 4px;

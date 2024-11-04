@@ -1,55 +1,32 @@
 <template>
   <div class="login-container">
-    <form @submit.prevent="handleLogin">
+    <h1>Login</h1>
+    <p>Welcome to the Login page!</p>
+    <form @submit.prevent="handleSubmit">
       <div class="form-group">
-        <label for="username">Email</label>
-        <input
-          type="text"
-          id="email"
-          v-model="email"
-          class="form-control"
-          required
-        />
+        <label for="email">Email:</label>
+        <input type="email" id="email" v-model="email" required />
       </div>
       <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          v-model="password"
-          class="form-control"
-          required
-        />
+        <label for="password">Password:</label>
+        <input type="password" id="password" v-model="password" required />
       </div>
-      <button type="submit" class="btn btn-primary">Login</button>
+      <button type="submit">Login</button>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
 
-const router = useRouter()
-const authStore = useAuthStore()
+const email = ref('');
+const password = ref('');
 
-const email = ref('')
-const password = ref('')
-
-async function handleLogin() {
-  const success = await authStore.login({
-    email: email.value,
-    password: password.value,
-  })
-
-  if (success) {
-    router.push('/dashboard')
-  } else {
-    // Handle login error
-    console.error('Login failed')
-  }
-}
+const handleSubmit = () => {
+  // Handle login logic here
+  console.log('Email:', email.value);
+  console.log('Password:', password.value);
+};
 </script>
 
 <style scoped>
@@ -92,7 +69,7 @@ input {
 button {
   width: 100%;
   padding: 0.75rem;
-  background-color: #007bff;
+  background-color: #007BFF;
   color: white;
   border: none;
   border-radius: 4px;
