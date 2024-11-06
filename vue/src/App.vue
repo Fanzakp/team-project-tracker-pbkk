@@ -12,6 +12,8 @@ const route = useRoute();
         <li><a href="/dashboard">Dashboard</a></li>
         <li><a href="/register">Register</a></li>
         <li><a href="/login">Login</a></li>
+        <li><a href="/logout">Logout</a></li>
+        <li><a href="/user">User</a></li>
         <li><a href="/about">About</a></li>
       </ul>
     </nav>

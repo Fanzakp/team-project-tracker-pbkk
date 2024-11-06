@@ -4,6 +4,8 @@ import Home from "../components/Home.vue";
 import Dashboard from "../components/Dashboard.vue";
 import Register from "../components/Register.vue";
 import Login from "../components/Login.vue";
+import Logout from "../components/Logout.vue";
+import User from "../components/User.vue";
 import About from "../components/About.vue";
 
 const routes = [
@@ -11,6 +13,8 @@ const routes = [
   { path: "/dashboard", component: Dashboard, meta: { hideSidebar: true } },
   { path: "/register", component: Register, meta: { hideSidebar: true } },
   { path: "/login", component: Login, meta: { hideSidebar: true } },
+  { path: "/logout", component: Logout, meta: { hideSidebar: true } },
+  { path: "/user", component: User, meta: { hideSidebar: true } },
   { path: "/about", component: About, meta: { hideSidebar: true } },
 ];
 
