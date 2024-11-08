@@ -3,14 +3,17 @@
     <aside class="sidebar">
       <h2>Menu</h2>
       <ul>
-        <li @click="selectMenu('projects')">Projects
-          <div v-if="selectedMenu === 'projects'" class="dropdown">
-            <select v-model="selectedProjectId" @change="selectProject">
-              <option v-for="project in projects" :key="project.id" :value="project.id">
+        <li @click="toggleDropdown('projects')" class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" aria-expanded="false">
+            Projects
+          </a>
+          <ul v-if="dropdowns.projects" class="dropdown-menu">
+            <li v-for="project in projects" :key="project.id">
+              <a class="dropdown-item" href="#" @click="selectProject(project.id)">
                 {{ project.name }}
-              </option>
-            </select>
-          </div>
+              </a>
+            </li>
+          </ul>
         </li>
         <li @click="selectMenu('calendar')">Calendar</li>
         <li @click="selectMenu('todaysTasks')">Today's Tasks</li>
@@ -84,8 +87,8 @@ const projects = ref([
 const selectedProjectId = ref(null);
 const selectedProject = computed(() => projects.value.find(project => project.id === selectedProjectId.value));
 
-const selectProject = () => {
-  // No need to set selectedProject manually, computed property will handle it
+const selectProject = (projectId) => {
+  selectedProjectId.value = projectId;
 };
 
 const addTask = () => {
@@ -99,34 +102,32 @@ const addTask = () => {
   }
 };
 
-const appointments = ref([]);
-const addAppointment = ({ start, end }) => {
-  const title = prompt('Enter appointment title:');
-  if (title) {
-    appointments.value.push({ id: Date.now(), start, end, title });
-  }
-};
-
 const todaysTasks = computed(() => {
   const today = new Date().toISOString().split('T')[0];
   return selectedProject.value ? selectedProject.value.tasks.filter(task => task.date === today) : [];
 });
 
-const todaysAppointments = computed(() => {
-  const today = new Date().toISOString().split('T')[0];
-  return appointments.value.filter(appointment => appointment.start.split('T')[0] === today);
-});
-
 const selectedMenu = ref('projects');
+
 const selectMenu = (menu) => {
   selectedMenu.value = menu;
+};
+
+const dropdowns = ref({
+  projects: false,
+});
+
+const toggleDropdown = (menu) => {
+  dropdowns.value[menu] = !dropdowns.value[menu];
+  if (menu === 'projects') {
+    selectedMenu.value = 'projects';
+  }
 };
 
 const todayDate = computed(() => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date().toLocaleDateString(undefined, options);
 });
-
 </script>
 
 <style scoped>
@@ -171,10 +172,30 @@ const todayDate = computed(() => {
   color: #333;
 }
 
-.sidebar select {
+.sidebar .dropdown-menu {
+  display: block;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #fff;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  z-index: 1000;
   width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  margin: 0;
+  list-style: none;
+}
+
+.sidebar .dropdown-item {
+  padding: 0.5rem 1rem;
+  color: #333;
+  text-decoration: none;
+  display: block;
+}
+
+.sidebar .dropdown-item:hover {
+  background-color: #e0e0e0;
+  color: #333;
 }
 
 .main-content {
@@ -230,12 +251,5 @@ button:hover {
 
 .today-section {
   margin-top: 2rem;
-}
-
-.dropdown {
-  margin-top: 0.5rem; /* Add margin to push other menu items down */
-  z-index: 1000;
-  width: 100%;
-  padding: 0.5rem;
 }
 </style>
