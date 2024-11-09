@@ -7,7 +7,9 @@ const route = useRoute();
 <template>
   <header>
     <nav class="navbar">
-      <img src="@/assets/notion-logo.png" alt="Logo" class="logo" />
+      <router-link to="/dashboard">
+        <img src="@/assets/notion-logo.png" alt="Logo" class="logo" />
+      </router-link>
       <ul>
         <li><a href="/dashboard">Dashboard</a></li>
         <li><a href="/register">Register</a></li>
