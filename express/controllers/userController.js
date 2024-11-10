@@ -41,7 +41,27 @@ const updateUserRole = async (req, res) => {
   }
 };
 
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "username", "email", "isAdmin"],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({
+      message: "Failed to get profile",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   updateUserRole,
+  getProfile,
   // Fungsi lain jika ada
 };

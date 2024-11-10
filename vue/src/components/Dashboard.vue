@@ -1,69 +1,3 @@
-<template>
-  <div class="dashboard">
-    <aside class="sidebar">
-      <h2>Menu</h2>
-      <ul>
-        <li @click="toggleDropdown('projects')" class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" aria-expanded="false">
-            Projects
-          </a>
-          <ul v-if="dropdowns.projects" class="dropdown-menu">
-            <li v-for="project in projects" :key="project.id">
-              <a class="dropdown-item" href="#" @click="selectProject(project.id)">
-                {{ project.name }}
-              </a>
-            </li>
-          </ul>
-        </li>
-        <li @click="selectMenu('calendar')">Calendar</li>
-        <li @click="selectMenu('todaysTasks')">Today's Tasks</li>
-      </ul>
-    </aside>
-    <main class="main-content">
-      <div v-if="selectedMenu === 'projects' && selectedProject">
-        <h1>{{ selectedProject.name }}</h1>
-        <p>{{ selectedProject.description }}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="task in selectedProject.tasks" :key="task.id">
-              <td>{{ task.title }}</td>
-              <td>{{ task.description }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <button @click="addTask">Add New Task</button>
-      </div>
-      <div v-if="selectedMenu === 'projects' && !selectedProject">
-        <h1>{{ todayDate }}</h1>
-        <p>Select a project from the dropdown to view details.</p>
-      </div>
-      <div v-if="selectedMenu === 'calendar'" class="calendar-section">
-        <h2>Calendar</h2>
-        <vue-cal
-          v-model="appointments"
-          @cell-click="addAppointment"
-          :time="true"
-          :on-event-click="editAppointment"
-          :on-event-dblclick="deleteAppointment"
-          default-view="week"
-        ></vue-cal>
-      </div>
-      <div v-if="selectedMenu === 'todaysTasks'" class="today-section">
-        <h2>Today's Tasks</h2>
-        <ul>
-          <li v-for="task in todaysTasks" :key="task.id">{{ task.title }}</li>
-        </ul>
-      </div>
-    </main>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -72,23 +6,30 @@ import 'vue-cal/dist/vuecal.css';
 
 const router = useRouter();
 
-const projects = ref([
-  { id: 1, name: 'Not Started', description: 'Projects that has not been started yet', tasks: [
+// Group projects by status
+const projectsByStatus = ref({
+  'Not Started': {
+    name: 'Not Started',
+    description: 'Projects that have not been started yet',
+    projects: []
+  },
+  'In Progress': {
+    name: 'In Progress',
+    description: 'Projects currently in progress',
+    projects: []
+  },
+  'Finished': {
+    name: 'Finished',
+    description: 'Completed projects',
+    projects: []
+  }
+});
 
-  ]},
-  { id: 2, name: 'In Progress', description: 'In progress project that needed updates', tasks: [
+const selectedStatus = ref(null);
+const selectedProject = ref(null);
 
-  ]},
-  { id: 3, name: 'Finished', description: 'Finished projects will showed here', tasks: [
-
-  ]},
-]);
-
-const selectedProjectId = ref(null);
-const selectedProject = computed(() => projects.value.find(project => project.id === selectedProjectId.value));
-
-const selectProject = (projectId) => {
-  selectedProjectId.value = projectId;
+const selectProject = (project) => {
+  selectedProject.value = project;
 };
 
 const addTask = () => {
@@ -122,6 +63,85 @@ const todayDate = computed(() => {
   return new Date().toLocaleDateString(undefined, options);
 });
 </script>
+
+<template>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <h2>Menu</h2>
+      <ul>
+        <li @click="selectMenu('projectlist')">Project List</li>
+        <li @click="toggleDropdown('projects')" class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" aria-expanded="false">
+            Projects
+          </a>
+          <ul v-if="dropdowns.projects" class="dropdown-menu">
+            <li v-for="(status, key) in projectsByStatus" :key="key">
+              <div class="status-section">
+                <h3>{{ status.name }}</h3>
+                <div class="project-list">
+                  <a v-for="project in status.projects"
+                     :key="project.id"
+                     class="dropdown-item"
+                     href="#"
+                     @click="selectProject(project)">
+                    {{ project.name }}
+                  </a>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li @click="selectMenu('calendar')">Calendar</li>
+        <li @click="selectMenu('todaysTasks')">Today's Tasks</li>
+      </ul>
+    </aside>
+    <main class="main-content">
+      <div v-if="selectedMenu === 'projects' && selectedProject">
+        <h1>{{ selectedProject.name }}</h1>
+        <p>{{ selectedProject.description }}</p>
+        <p><strong>Status:</strong> {{ selectedProject.status }}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="task in selectedProject.tasks" :key="task.id">
+              <td>{{ task.title }}</td>
+              <td>{{ task.description }}</td>
+              <td>{{ task.status }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <button @click="addTask">Add Task</button>
+      </div>
+      <div v-if="selectedMenu === 'projects' && !selectedProject">
+        <h1>{{ todayDate }}</h1>
+        <p>Select a project from the dropdown to view details.</p>
+      </div>
+      <div v-if="selectedMenu === 'calendar'" class="calendar-section">
+        <h2>Calendar</h2>
+        <vue-cal
+          v-model="appointments"
+          @cell-click="addAppointment"
+          :time="true"
+          :on-event-click="editAppointment"
+          :on-event-dblclick="deleteAppointment"
+          default-view="week"
+        ></vue-cal>
+      </div>
+      <div v-if="selectedMenu === 'todaysTasks'" class="today-section">
+        <h2>Today's Tasks</h2>
+        <ul>
+          <li v-for="task in todaysTasks" :key="task.id">{{ task.title }}</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+</template>
 
 <style scoped>
 .dashboard {
@@ -244,5 +264,20 @@ button:hover {
 
 .today-section {
   margin-top: 2rem;
+}
+
+.status-section {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.status-section h3 {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.project-list {
+  margin-left: 1rem;
 }
 </style>
