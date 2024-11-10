@@ -1,3 +1,4 @@
+const { isAdmin } = require("../middleware/auth");
 const { User } = require("../models");
 const jwt = require("jsonwebtoken");
 
@@ -5,10 +6,13 @@ const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    const adminExists = await User.findOne({ where: { isAdmin: true } });
+
     const user = await User.create({
       username,
       email,
       password,
+      isAdmin: !adminExists,
     });
 
     const accessToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
@@ -30,6 +34,12 @@ const register = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+      },
       accessToken,
     });
   } catch (error) {

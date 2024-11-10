@@ -3,6 +3,11 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const fileRoutes = require("./routes/fileRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const userRoutes = require("./routes/userRoutes");
 const { sequelize } = require("./models");
 const app = express();
 const path = require("path");
@@ -22,10 +27,16 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/files", fileRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/users", userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

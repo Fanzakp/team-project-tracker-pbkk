@@ -29,4 +29,13 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+// [middleware/isAdmin.js]
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.isAdmin) {
+    next();
+  } else {
+    res.status(403).json({ message: "Access denied" });
+  }
+};
+
+module.exports = { verifyToken, isAdmin };
