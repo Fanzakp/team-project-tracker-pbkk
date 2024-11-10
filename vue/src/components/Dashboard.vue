@@ -365,7 +365,7 @@ const formatDate = (date) => {
         <table>
           <thead>
             <tr>
-              <th style="width: 50px">Select</th>
+              <th style="width: 30px">Select</th>
               <th>Name</th>
               <th>Project Name</th>
               <th>Description</th>
@@ -430,7 +430,7 @@ const formatDate = (date) => {
         <table class="projects-table">
           <thead>
             <tr>
-              <th style="width: 50px">Select</th>
+              <th style="width: 30px">Select</th>
               <th>Name</th>
               <th>Description</th>
               <th>Due Date</th>
@@ -617,6 +617,10 @@ th, td {
 th:nth-child(4),
 td:nth-child(4) {
   min-width: 150px; /* Wider column for status dropdown */
+}
+th:nth-child(5),
+td:nth-child(5) {
+  min-width: 180px; /* Wider column for status dropdown */
 }
 
 /* Make description column flexible */

@@ -96,8 +96,14 @@ export const useAuthStore = defineStore('auth', {
       const token = localStorage.getItem('token')
       const user = localStorage.getItem('user')
       if (token && user) {
-        this.token = token
-        this.user = JSON.parse(user)
+        try {
+          const parsedUser = JSON.parse(user);
+
+          this.token = token
+          this.user = JSON.parse(user)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        }
       }
     },
   },
