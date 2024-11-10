@@ -6,30 +6,23 @@ import 'vue-cal/dist/vuecal.css';
 
 const router = useRouter();
 
-// Group projects by status
-const projectsByStatus = ref({
-  'Not Started': {
-    name: 'Not Started',
-    description: 'Projects that have not been started yet',
-    projects: []
-  },
-  'In Progress': {
-    name: 'In Progress',
-    description: 'Projects currently in progress',
-    projects: []
-  },
-  'Finished': {
-    name: 'Finished',
-    description: 'Completed projects',
-    projects: []
-  }
-});
+const status = ref([
+  { id: 1, name: 'Not Started', description: 'status that has not been started yet', tasks: [
 
-const selectedStatus = ref(null);
-const selectedProject = ref(null);
+  ]},
+  { id: 2, name: 'In Progress', description: 'In progress project that needed updates', tasks: [
 
-const selectProject = (project) => {
-  selectedProject.value = project;
+  ]},
+  { id: 3, name: 'Finished', description: 'Finished status will showed here', tasks: [
+
+  ]},
+]);
+
+const selectedProjectId = ref(null);
+const selectedProject = computed(() => status.value.find(project => project.id === selectedProjectId.value));
+
+const selectProject = (projectId) => {
+  selectedProjectId.value = projectId;
 };
 
 const addTask = () => {
@@ -41,20 +34,20 @@ const todaysTasks = computed(() => {
   return selectedProject.value ? selectedProject.value.tasks.filter(task => task.date === today) : [];
 });
 
-const selectedMenu = ref('projects');
+const selectedMenu = ref('status');
 
 const selectMenu = (menu) => {
   selectedMenu.value = menu;
 };
 
 const dropdowns = ref({
-  projects: false,
+  status: false,
 });
 
 const toggleDropdown = (menu) => {
   dropdowns.value[menu] = !dropdowns.value[menu];
-  if (menu === 'projects') {
-    selectedMenu.value = 'projects';
+  if (menu === 'status') {
+    selectedMenu.value = 'status';
   }
 };
 
@@ -69,56 +62,44 @@ const todayDate = computed(() => {
     <aside class="sidebar">
       <h2>Menu</h2>
       <ul>
-        <li @click="selectMenu('projectlist')">Project List</li>
-        <li @click="toggleDropdown('projects')" class="nav-item dropdown">
+        <li @click="toggleDropdown('status')" class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" aria-expanded="false">
-            Projects
+            Status
           </a>
-          <ul v-if="dropdowns.projects" class="dropdown-menu">
-            <li v-for="(status, key) in projectsByStatus" :key="key">
-              <div class="status-section">
-                <h3>{{ status.name }}</h3>
-                <div class="project-list">
-                  <a v-for="project in status.projects"
-                     :key="project.id"
-                     class="dropdown-item"
-                     href="#"
-                     @click="selectProject(project)">
-                    {{ project.name }}
-                  </a>
-                </div>
-              </div>
+          <ul v-if="dropdowns.status" class="dropdown-menu">
+            <li v-for="project in status" :key="project.id">
+              <a class="dropdown-item" href="#" @click="selectProject(project.id)">
+                {{ project.name }}
+              </a>
             </li>
           </ul>
         </li>
+        <li @click="selectMenu('projects')">Projects</li>
         <li @click="selectMenu('calendar')">Calendar</li>
         <li @click="selectMenu('todaysTasks')">Today's Tasks</li>
       </ul>
     </aside>
     <main class="main-content">
-      <div v-if="selectedMenu === 'projects' && selectedProject">
+      <div v-if="selectedMenu === 'status' && selectedProject">
         <h1>{{ selectedProject.name }}</h1>
         <p>{{ selectedProject.description }}</p>
-        <p><strong>Status:</strong> {{ selectedProject.status }}</p>
         <table>
           <thead>
             <tr>
               <th>Title</th>
               <th>Description</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="task in selectedProject.tasks" :key="task.id">
               <td>{{ task.title }}</td>
               <td>{{ task.description }}</td>
-              <td>{{ task.status }}</td>
             </tr>
           </tbody>
         </table>
-        <button @click="addTask">Add Task</button>
+        <button @click="addTask">Add New Task</button>
       </div>
-      <div v-if="selectedMenu === 'projects' && !selectedProject">
+      <div v-if="selectedMenu === 'status' && !selectedProject">
         <h1>{{ todayDate }}</h1>
         <p>Select a project from the dropdown to view details.</p>
       </div>
@@ -264,20 +245,5 @@ button:hover {
 
 .today-section {
   margin-top: 2rem;
-}
-
-.status-section {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.status-section h3 {
-  font-size: 1rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.project-list {
-  margin-left: 1rem;
 }
 </style>
