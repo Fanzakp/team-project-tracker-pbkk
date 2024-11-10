@@ -132,6 +132,71 @@ const status = ref([
 const selectedProjectId = ref(null);
 const selectedProject = computed(() => status.value.find(project => project.id === selectedProjectId.value));
 
+const selectedTasks = ref([]);
+const selectedProjects = ref([]);
+
+const toggleTaskSelection = (taskId) => {
+  const index = selectedTasks.value.indexOf(taskId);
+  if (index === -1) {
+    selectedTasks.value.push(taskId);
+  } else {
+    selectedTasks.value.splice(index, 1);
+  }
+};
+
+const toggleProjectSelection = (projectId) => {
+  const index = selectedProjects.value.indexOf(projectId);
+  if (index === -1) {
+    selectedProjects.value.push(projectId);
+  } else {
+    selectedProjects.value.splice(index, 1);
+  }
+};
+
+const deleteSelectedTasks = async () => {
+  if (!confirm(`Are you sure you want to delete ${selectedTasks.value.length} tasks?`)) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    for (const taskId of selectedTasks.value) {
+      await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    selectedTasks.value = [];
+    await fetchTasks();
+  } catch (err) {
+    console.error('Error deleting tasks:', err);
+    error.value = 'Failed to delete tasks';
+  }
+};
+
+const deleteSelectedProjects = async () => {
+  if (!confirm(`Are you sure you want to delete ${selectedProjects.value.length} projects?`)) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    for (const projectId of selectedProjects.value) {
+      await fetch(`http://localhost:5000/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    selectedProjects.value = [];
+    await fetchProjects();
+  } catch (err) {
+    console.error('Error deleting projects:', err);
+    error.value = 'Failed to delete projects';
+  }
+};
+
 const isLoading = ref(false);
 
 const selectProject = async (projectId) => {
@@ -292,11 +357,15 @@ const formatDate = (date) => {
     </aside>
     <main class="main-content">
       <div v-if="selectedMenu === 'status' && selectedProject">
-        <h1>{{ selectedProject.name }}</h1>
-        <p>{{ selectedProject.description }}</p>
+        <div class="header-actions">
+          <h1>{{ selectedProject.name }}</h1>
+          <button @click="addTask" class="btn-primary">Add New Task</button>
+        </div>
+
         <table>
           <thead>
             <tr>
+              <th style="width: 50px">Select</th>
               <th>Name</th>
               <th>Project Name</th>
               <th>Description</th>
@@ -307,6 +376,13 @@ const formatDate = (date) => {
           </thead>
           <tbody>
             <tr v-for="task in tasksWithProjectNames" :key="task.id">
+              <td>
+                <input
+                  type="checkbox"
+                  :checked="selectedTasks.includes(task.id)"
+                  @change="toggleTaskSelection(task.id)"
+                >
+              </td>
               <td>{{ task.name }}</td>
               <td>{{ task.projectName }}</td>
               <td>{{ task.description }}</td>
@@ -334,7 +410,12 @@ const formatDate = (date) => {
             </tr>
           </tbody>
         </table>
-        <button @click="addTask" class="btn-primary">Add New Task</button>
+        <button
+          v-if="selectedTasks.length > 0"
+          @click="deleteSelectedTasks"
+          class="btn-delete">
+          Delete
+        </button>
       </div>
       <div v-if="selectedMenu === 'status' && !selectedProject">
         <h1>{{ todayDate }}</h1>
@@ -349,6 +430,7 @@ const formatDate = (date) => {
         <table class="projects-table">
           <thead>
             <tr>
+              <th style="width: 50px">Select</th>
               <th>Name</th>
               <th>Description</th>
               <th>Due Date</th>
@@ -357,6 +439,13 @@ const formatDate = (date) => {
           </thead>
           <tbody>
             <tr v-for="project in projects" :key="project.id">
+              <td>
+                <input
+                  type="checkbox"
+                  :checked="selectedProjects.includes(project.id)"
+                  @change="toggleProjectSelection(project.id)"
+                >
+              </td>
               <td>{{ project.name }}</td>
               <td>{{ project.description }}</td>
               <td>{{ new Date(project.projectDue).toLocaleDateString() }}</td>
@@ -368,6 +457,12 @@ const formatDate = (date) => {
             </tr>
           </tbody>
         </table>
+        <button
+          v-if="selectedProjects.length > 0"
+          @click="deleteSelectedProjects"
+          class="btn-delete">
+          Delete
+        </button>
       </div>
       <div v-if="selectedMenu === 'calendar'" class="calendar-section">
         <h2>Calendar</h2>
@@ -521,7 +616,7 @@ th, td {
 
 th:nth-child(4),
 td:nth-child(4) {
-  min-width: 200px; /* Wider column for status dropdown */
+  min-width: 150px; /* Wider column for status dropdown */
 }
 
 /* Make description column flexible */
@@ -575,6 +670,20 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: #c82333;
 }
 
 .btn-secondary {
