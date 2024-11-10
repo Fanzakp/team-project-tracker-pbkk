@@ -2,6 +2,9 @@
   <div class="login-container">
     <h1>Login</h1>
     <p>Welcome to the Login page!</p>
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
         <label for="email">Email:</label>
@@ -11,21 +14,46 @@
         <label for="password">Password:</label>
         <input type="password" id="password" v-model="password" required />
       </div>
-      <button type="submit">Login</button>
+      <button type="submit" :disabled="isLoading">
+        {{ isLoading ? 'Logging in...' : 'Login' }}
+      </button>
     </form>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
+const router = useRouter();
+const authStore = useAuthStore();
 const email = ref('');
 const password = ref('');
+const error = ref('');
+const isLoading = ref(false);
 
-const handleSubmit = () => {
-  // Handle login logic here
-  console.log('Email:', email.value);
-  console.log('Password:', password.value);
+const handleSubmit = async () => {
+  try {
+    isLoading.value = true;
+    error.value = '';
+
+    const loginSuccess = await authStore.login({
+      email: email.value,
+      password: password.value
+    });
+
+    if (loginSuccess) {
+      router.push('/dashboard');
+    } else {
+      error.value = 'Invalid credentials';
+    }
+  } catch (err) {
+    error.value = 'Login failed';
+    console.error('Login error:', err);
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
@@ -79,5 +107,20 @@ button {
 
 button:hover {
   background-color: #0056b3;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 </style>

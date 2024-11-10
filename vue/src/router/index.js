@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import store from "../store";
 import Home from "../components/Home.vue";
 import Dashboard from "../components/Dashboard.vue";
@@ -10,14 +11,57 @@ import About from "../components/About.vue";
 import TaskForm from "@/components/TaskForm.vue";
 
 const routes = [
-  { path: "/", component: Home },
-  { path: "/dashboard", component: Dashboard, meta: { hideSidebar: true } },
-  { path: "/register", component: Register, meta: { hideSidebar: true } },
-  { path: "/login", component: Login, meta: { hideSidebar: true } },
-  { path: "/logout", component: Logout, meta: { hideSidebar: true } },
-  { path: "/user", component: User, meta: { hideSidebar: true } },
-  { path: "/about", component: About, meta: { hideSidebar: true } },
-  { path: "/new-task", component: TaskForm, meta: { hideSidebar: true } },
+  {
+    path: "/",
+    component: Home
+  },
+  {
+    path: "/dashboard",
+    component: Dashboard,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/user",
+    component: User,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/logout",
+    component: Logout,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/register",
+    component: Register,
+    meta: {
+      requiresUnauth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/login",
+    component: Login,
+    meta: {
+      requiresUnauth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/about",
+    component: About,
+    meta: {
+      hideSidebar: true
+    }
+  }
 ];
 
 const router = createRouter({
@@ -26,11 +70,12 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  if (
-    to.matched.some((record) => record.meta.requiresAuth) &&
-    !store.getters.isAuthenticated
-  ) {
-    next("/login");
+  const authStore = useAuthStore();
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login');
+  } else if (to.meta.requiresUnauth && authStore.isAuthenticated) {
+    next('/dashboard');
   } else {
     next();
   }

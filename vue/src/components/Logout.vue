@@ -1,15 +1,32 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const isConfirmed = ref(false);
 
-const logout = () => {
+const logout = async () => {
   if (isConfirmed.value) {
-    // Remove authentication (e.g., clear token or user data)
-    localStorage.removeItem('authToken'); // Example of clearing a token
-    router.push('/login'); // Redirect to login page
+    try {
+      // Call logout API endpoint
+      const response = await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Clear auth store state
+        authStore.logout();
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   }
 };
 </script>

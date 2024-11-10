@@ -1,22 +1,33 @@
 <script setup>
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
+const authStore = useAuthStore();
 </script>
 
 <template>
   <header>
     <nav class="navbar">
-      <router-link to="/dashboard">
+      <router-link to="/dashboard" v-if="authStore.isAuthenticated">
         <img src="@/assets/notion-logo.png" alt="Logo" class="logo" />
       </router-link>
       <ul>
-        <li><a href="/dashboard">Dashboard</a></li>
-        <li><a href="/register">Register</a></li>
-        <li><a href="/login">Login</a></li>
-        <li><a href="/logout">Logout</a></li>
-        <li><a href="/user">User</a></li>
-        <li><a href="/about">About</a></li>
+        <!-- Show these links only when authenticated -->
+        <template v-if="authStore.isAuthenticated">
+          <li><router-link to="/dashboard">Dashboard</router-link></li>
+          <li><router-link to="/user">User</router-link></li>
+          <li><router-link to="/logout">Logout</router-link></li>
+        </template>
+
+        <!-- Show these links only when not authenticated -->
+        <template v-else>
+          <li><router-link to="/register">Register</router-link></li>
+          <li><router-link to="/login">Login</router-link></li>
+        </template>
+
+        <!-- Always show About -->
+        <li><router-link to="/about">About</router-link></li>
       </ul>
     </nav>
   </header>

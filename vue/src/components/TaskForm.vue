@@ -18,12 +18,16 @@ const taskData = ref({
 
 const submitTask = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/task', {
+    const response = await fetch('http://localhost:5000/api/tasks/task', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}` // Add auth token
       },
-      body: JSON.stringify(taskData.value)
+      body: JSON.stringify({
+        ...taskData.value,
+        status: taskData.value.status || 'Not Started' // Provide default status
+      })
     })
 
     if (response.ok) {
@@ -33,7 +37,7 @@ const submitTask = async () => {
       error.value = data.message || 'Failed to create task'
     }
   } catch (err) {
-    error.value = 'Error creating task'
+    error.value = 'Error connecting to server'
     console.error('Error:', err)
   }
 }

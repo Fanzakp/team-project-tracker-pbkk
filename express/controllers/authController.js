@@ -45,7 +45,9 @@ const register = async (req, res) => {
   } catch (error) {
     res.status(400).json({
       message: "Registration failed",
-      error: error.message,
+      error: error.name === 'SequelizeValidationError' 
+        ? error.errors.map(e => e.message).join(', ')
+        : error.message
     });
   }
 };

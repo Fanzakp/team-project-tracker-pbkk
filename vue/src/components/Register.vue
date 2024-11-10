@@ -3,22 +3,27 @@
     <h1>Register</h1>
     <p>Create your account</p>
 
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
     <form @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="name">Name:</label>
-        <input
-          type="text"
-          id="name"
-          v-model="name"
-          required
-          minlength="3"
-          maxlength="30"
-        />
+      <div class="form-group" :class="{ error: !validations.username && username }">
+        <label for="username">Username:</label>
+        <input type="text" id="username" v-model="username" required minlength="3" />
+        <span v-if="!validations.username && username" class="error-text">
+          Username must be at least 3 characters
+        </span>
       </div>
-      <div class="form-group">
+
+      <div class="form-group" :class="{ error: !validations.email && email }">
         <label for="email">Email:</label>
         <input type="email" id="email" v-model="email" required />
+        <span v-if="!validations.email && email" class="error-text">
+          Please enter a valid email address
+        </span>
       </div>
+
       <div class="form-group">
         <label for="password">Password:</label>
         <input
@@ -29,7 +34,7 @@
           minlength="6"
         />
       </div>
-      <button type="submit" :disabled="isLoading">
+      <button type="submit" :disabled="isLoading || !isValid">
         {{ isLoading ? 'Registering...' : 'Register' }}
       </button>
     </form>
@@ -37,34 +42,84 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const name = ref('')
+const username = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
+// Add more specific validation
+const validations = computed(() => ({
+  username: username.value.length >= 3,
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value),
+  password: password.value.length >= 6
+}))
+
+const isValid = computed(() =>
+  Object.values(validations.value).every(valid => valid)
+)
+
 const handleSubmit = async () => {
   try {
     isLoading.value = true
     error.value = ''
-    const { success, message } = await authStore.register({
-      name: name.value,
-      email: email.value,
-      password: password.value,
+
+    // Validate before sending
+    if (!validations.value.username) {
+      error.value = 'Username must be at least 3 characters'
+      return
+    }
+    if (!validations.value.email) {
+      error.value = 'Please enter a valid email address'
+      return
+    }
+    if (!validations.value.password) {
+      error.value = 'Password must be at least 6 characters'
+      return
+    }
+
+    const payload = {
+      username: username.value.trim(),
+      email: email.value.trim().toLowerCase(),
+      password: password.value
+    }
+
+    const response = await fetch('http://localhost:5000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include', // Add this to handle cookies
+      body: JSON.stringify(payload)
     })
-    if (success) {
-      router.push('/dashboard')
+
+    const data = await response.json()
+
+    if (response.ok) {
+      // Login after successful registration
+      const loginSuccess = await authStore.login({
+        email: email.value,
+        password: password.value
+      })
+
+      if (loginSuccess) {
+        router.push('/dashboard')
+      } else {
+        error.value = 'Registration successful but login failed'
+      }
     } else {
-      error.value = message
+      error.value = data.message || data.error || 'Registration failed'
+      console.error('Registration error details:', data.error)
     }
   } catch (err) {
-    error.value = err.message || 'Registration failed'
+    error.value = 'Unable to connect to server'
+    console.error('Registration error:', err)
   } finally {
     isLoading.value = false
   }
