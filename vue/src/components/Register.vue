@@ -40,6 +40,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+
 const router = useRouter()
 const authStore = useAuthStore()
 const name = ref('')
@@ -47,6 +48,7 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 const isLoading = ref(false)
+
 const handleSubmit = async () => {
   try {
     isLoading.value = true
