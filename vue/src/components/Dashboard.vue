@@ -1,10 +1,61 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import VueCal from 'vue-cal';
 import 'vue-cal/dist/vuecal.css';
 
 const router = useRouter();
+
+const projects = ref([]);
+const error = ref(null);
+
+const fetchProjects = async () => {
+  error.value = null;
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    error.value = 'Not authenticated';
+    router.push('/login');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/projects', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    projects.value = data;
+  } catch (err) {
+    error.value = 'Error fetching projects: ' + err.message;
+    console.error('Error fetching projects:', err);
+
+    // Handle unauthorized access
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token');
+      router.push('/login');
+    }
+  }
+};
+
+// Add function to handle project editing
+const editProject = (projectId) => {
+  router.push(`/edit-project/${projectId}`);
+};
+
+onMounted(() => {
+  if (selectedMenu.value === 'projects') {
+    fetchProjects();
+  }
+});
 
 const status = ref([
   { id: 1, name: 'Not Started', description: 'status that has not been started yet', tasks: [
@@ -36,8 +87,12 @@ const todaysTasks = computed(() => {
 
 const selectedMenu = ref('status');
 
+// Update selectMenu to fetch projects when projects menu is selected
 const selectMenu = (menu) => {
   selectedMenu.value = menu;
+  if (menu === 'projects') {
+    fetchProjects();
+  }
 };
 
 const dropdowns = ref({
@@ -102,6 +157,35 @@ const todayDate = computed(() => {
       <div v-if="selectedMenu === 'status' && !selectedProject">
         <h1>{{ todayDate }}</h1>
         <p>Select a project from the dropdown to view details.</p>
+      </div>
+      <div v-if="selectedMenu === 'projects'" class="projects-section">
+        <div class="header-actions">
+          <h2>Projects</h2>
+          <button @click="addProject" class="btn-primary">Add New Project</button>
+        </div>
+
+        <table class="projects-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Due Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="project in projects" :key="project.id">
+              <td>{{ project.name }}</td>
+              <td>{{ project.description }}</td>
+              <td>{{ new Date(project.projectDue).toLocaleDateString() }}</td>
+              <td>
+                <button @click="editProject(project.id)" class="btn-secondary">
+                  Edit
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div v-if="selectedMenu === 'calendar'" class="calendar-section">
         <h2>Calendar</h2>
@@ -229,6 +313,58 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.projects-section {
+  padding: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  color: white;
+}
+
+.projects-table th,
+.projects-table td {
+  padding: 1rem;
+  text-align: left;
+}
+
+.projects-table th {
+  background-color: #222;
+  font-weight: bold;
+}
+
+.btn-primary {
+  background-color: #007BFF;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  opacity: 0.9;
 }
 
 button:hover {

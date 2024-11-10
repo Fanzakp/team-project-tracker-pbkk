@@ -9,6 +9,7 @@ import Logout from "../components/Logout.vue";
 import User from "../components/User.vue";
 import About from "../components/About.vue";
 import TaskForm from "@/components/TaskForm.vue";
+import ProjectForm from "@/components/ProjectForm.vue";
 
 const routes = [
   {
@@ -65,6 +66,14 @@ const routes = [
   {
     path: "/new-task",
     component: TaskForm,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: "/new-project",
+    component: ProjectForm,
     meta: {
       requiresAuth: true,
       hideSidebar: true
