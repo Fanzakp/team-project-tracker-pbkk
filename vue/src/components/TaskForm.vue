@@ -1,11 +1,44 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const error = ref('')
+const projects = ref([]);
+const error = ref(null);
+
+const fetchProjects = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    error.value = 'Not authenticated';
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/projects', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    projects.value = data;
+  } catch (err) {
+    error.value = 'Error fetching projects: ' + err.message;
+    console.error('Error:', err);
+  }
+};
+
+onMounted(() => {
+  fetchProjects();
+});
 
 const taskData = ref({
   name: '', // Changed from title to match backend
@@ -13,28 +46,36 @@ const taskData = ref({
   status: '', // Added default status
   taskDue: '',
   projectId: '', // Added project selection
-  assignedUserIds: [] // Added user assignments
 })
 
 const submitTask = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/tasks/task', {
+    // Debug log
+    console.log('Submitting task data:', {
+      ...taskData.value,
+      taskDue: new Date(taskData.value.taskDue).toISOString()
+    });
+
+    const response = await fetch('http://localhost:5000/api/tasks', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}` // Add auth token
+        'Authorization': `Bearer ${authStore.token}`
       },
       body: JSON.stringify({
         ...taskData.value,
-        status: taskData.value.status || 'Not Started' // Provide default status
+        taskDue: new Date(taskData.value.taskDue).toISOString()
       })
     })
+
+    // Debug log response
+    const responseData = await response.json()
+    console.log('Server response:', responseData)
 
     if (response.ok) {
       router.push('/dashboard')
     } else {
-      const data = await response.json()
-      error.value = data.message || 'Failed to create task'
+      error.value = responseData.message || 'Failed to create task'
     }
   } catch (err) {
     error.value = 'Error connecting to server'
@@ -72,8 +113,13 @@ const submitTask = async () => {
           required
         >
           <option value="">Select Project</option>
-          <option value="1">Project 1</option>
-          <option value="2">Project 2</option>
+          <option
+            v-for="project in projects"
+            :key="project.id"
+            :value="project.id"
+          >
+            {{ project.name }}
+          </option>
         </select>
       </div>
       <div class="form-group">
