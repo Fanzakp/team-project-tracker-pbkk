@@ -7,6 +7,7 @@ import Login from "../components/Login.vue";
 import Logout from "../components/Logout.vue";
 import User from "../components/User.vue";
 import About from "../components/About.vue";
+import TaskForm from "@/components/TaskForm.vue";
 
 const routes = [
   { path: "/", component: Home },
@@ -16,6 +17,7 @@ const routes = [
   { path: "/logout", component: Logout, meta: { hideSidebar: true } },
   { path: "/user", component: User, meta: { hideSidebar: true } },
   { path: "/about", component: About, meta: { hideSidebar: true } },
+  { path: "/new-task", component: TaskForm, meta: { hideSidebar: true } },
 ];
 
 const router = createRouter({

@@ -66,21 +66,21 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import VueCal from 'vue-cal';
 import 'vue-cal/dist/vuecal.css';
 
+const router = useRouter();
+
 const projects = ref([
   { id: 1, name: 'Not Started', description: 'Projects that has not been started yet', tasks: [
-    { id: 1, title: 'Task 1', description: 'Description for Task 1' },
-    { id: 2, title: 'Task 2', description: 'Description for Task 2' },
+
   ]},
   { id: 2, name: 'In Progress', description: 'In progress project that needed updates', tasks: [
-    { id: 3, title: 'Task 3', description: 'Description for Task 3' },
-    { id: 4, title: 'Task 4', description: 'Description for Task 4' },
+
   ]},
   { id: 3, name: 'Finished', description: 'Finished projects will showed here', tasks: [
-    { id: 5, title: 'Task 5', description: 'Description for Task 5' },
-    { id: 6, title: 'Task 6', description: 'Description for Task 6' },
+
   ]},
 ]);
 
@@ -92,14 +92,7 @@ const selectProject = (projectId) => {
 };
 
 const addTask = () => {
-  if (selectedProject.value) {
-    const newTaskId = selectedProject.value.tasks.length + 1;
-    selectedProject.value.tasks.push({
-      id: newTaskId,
-      title: `Task ${newTaskId}`,
-      description: `Description for Task ${newTaskId}`,
-    });
-  }
+  router.push('/new-task');
 };
 
 const todaysTasks = computed(() => {
