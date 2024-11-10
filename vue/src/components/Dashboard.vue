@@ -8,6 +8,7 @@ const router = useRouter();
 
 const projects = ref([]);
 const tasks = ref([]);
+const appointments = ref([]);
 const error = ref(null);
 
 const fetchProjects = async () => {
@@ -105,6 +106,10 @@ onMounted(() => {
   if (selectedMenu.value === 'status' && 'todaysTasks') {
     fetchTasks();
   }
+  if (selectedMenu.value === 'calendar') {
+    fetchProjects();
+    fetchTasks();
+  }
 });
 
 const status = ref([
@@ -180,6 +185,9 @@ const selectMenu = (menu) => {
   selectedMenu.value = menu;
   if (menu === 'projects') {
     fetchProjects();
+  } else if (menu === 'calendar') {
+    fetchProjects();
+    fetchTasks();
   }
 };
 
@@ -214,6 +222,24 @@ const updateTaskStatus = async (taskId, newStatus) => {
     error.value = 'Failed to update task status';
   }
 };
+
+const calendarEvents = computed(() => {
+  return tasks.value.map(task => ({
+    start: new Date(task.taskDue),
+    end: new Date(task.taskDue),
+    title: task.name,
+    content: `
+      ${task.name}<br>
+      Project: ${projects.value.find(p => p.id === task.projectId)?.name || 'Unknown'}
+      <br>
+      Status: <span class="status-badge status-${task.status.toLowerCase().replace(/\s+/g, '-')}">${task.status}</span>
+      <br>
+      Description: ${task.description}
+    `,
+    class: `status-${task.status.toLowerCase().replace(/\s+/g, '-')}`,
+    cssClass: `task-event status-${task.status.toLowerCase().replace(/\s+/g, '-')}`,
+  }));
+});
 
 const dropdowns = ref({
   status: false,
@@ -341,13 +367,24 @@ const formatDate = (date) => {
       <div v-if="selectedMenu === 'calendar'" class="calendar-section">
         <h2>Calendar</h2>
         <vue-cal
-          v-model="appointments"
-          @cell-click="addAppointment"
+          :events="calendarEvents"
           :time="true"
-          :on-event-click="editAppointment"
-          :on-event-dblclick="deleteAppointment"
-          default-view="week"
-        ></vue-cal>
+          :disable-views="['years', 'year']"
+          default-view="month"
+          today-button
+          :show-all-day-events="true"
+          :time-from="0 * 60"
+          :time-to="24 * 60"
+          :time-step="60"
+          style="height: 600px"
+        >
+          <template #event="{ event }">
+            <div class="calendar-event">
+              <div class="event-title">{{ event.title }}</div>
+              <div class="event-content" v-html="event.content"></div>
+            </div>
+          </template>
+        </vue-cal>
       </div>
       <div v-if="selectedMenu === 'todaysTasks'" class="today-section">
         <h2>Today's Tasks</h2>
@@ -554,11 +591,111 @@ button:hover {
 }
 
 .calendar-section {
-  margin-top: 1rem;
+  padding: 2rem;
+  background: #333;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  color: white;
 }
 
-::v-deep .vuecal__cell {
-  padding: 27px;
+:deep(.vuecal__event) {
+  border-radius: 4px;
+  min-height: 35px; /* Reduced from 40px */
+  min-width: 75px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  word-break: break-word;
+  margin-top: -4px; /* Add negative margin to move up */
+  position: relative; /* Add position relative */
+}
+
+:deep(.status-not-started) {
+  background-color: rgba(220, 53, 69, 0.9) !important;
+  color: white;
+  border-left: 4px solid #dc3545;
+}
+
+:deep(.status-in-progress) {
+  background-color: rgba(255, 193, 7, 0.9) !important;
+  color: black;
+  border-left: 4px solid #ffc107;
+}
+
+:deep(.status-finished) {
+  background-color: rgba(40, 167, 69, 0.9) !important;
+  color: white;
+  border-left: 4px solid #28a745;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+
+.status-badge.status-not-started {
+  background-color: #dc3545;
+  color: white;
+}
+
+.status-badge.status-in-progress {
+  background-color: #ffc107;
+  color: black;
+}
+
+.status-badge.status-finished {
+  background-color: #28a745;
+  color: white;
+}
+
+.calendar-event {
+  height: 100%;
+  padding-top: 9px; /* Add small top padding */
+}
+
+.event-title {
+  font-weight: bold;
+  font-size: clamp(0.7em, 1vw, 1.1em);
+  margin-top: -2px; /* Add negative margin to move title up */
+  margin-bottom: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.event-content {
+  font-size: clamp(0.5em, 0.8vw, 0.9em); /* Responsive font size */
+  line-height: 1.4;
+  padding: 0 4px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Limit to 3 lines */
+  -webkit-box-orient: vertical;
+}
+
+:deep(.vuecal__cell) {
+  padding: 16px; /* Reduced from 20px */
+}
+
+:deep(.vuecal__cell-content) {
+  padding: 8px; /* Reduced from 10px */
+  height: calc(100% - 32px); /* Adjusted calculation */
+}
+
+:deep(.vuecal__title-bar) {
+  background-color: #333;
+  color: white;
+}
+
+:deep(.vuecal__menu) {
+  background-color: #444;
+}
+
+:deep(.vuecal__view-btn) {
+  color: white;
 }
 
 .today-section {
