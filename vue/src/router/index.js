@@ -10,6 +10,8 @@ import User from "../components/User.vue";
 import About from "../components/About.vue";
 import TaskForm from "@/components/TaskForm.vue";
 import ProjectForm from "@/components/ProjectForm.vue";
+import TaskEdit from "@/components/TaskEdit.vue";
+import ProjectEdit from "@/components/ProjectEdit.vue";
 
 const routes = [
   {
@@ -74,6 +76,22 @@ const routes = [
   {
     path: "/new-project",
     component: ProjectForm,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: '/edit-task/:id',
+    component: TaskEdit,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
+  },
+  {
+    path: '/edit-project/:id',
+    component: ProjectEdit,
     meta: {
       requiresAuth: true,
       hideSidebar: true

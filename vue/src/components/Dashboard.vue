@@ -99,6 +99,11 @@ const editProject = (projectId) => {
   router.push(`/edit-project/${projectId}`);
 };
 
+const editTask = (taskId) => {
+  router.push(`/edit-task/${taskId}`);
+};
+
+
 onMounted(() => {
   if (selectedMenu.value === 'projects') {
     fetchProjects();
@@ -322,7 +327,7 @@ const formatDate = (date) => {
               </td>
               <td>{{ formatDate(task.taskDue) }}</td>
               <td>
-                <button @click="editProject(task.id)" class="btn-edit">
+                <button @click="editTask(task.id)" class="btn-edit">
                   Edit
                 </button>
               </td>
