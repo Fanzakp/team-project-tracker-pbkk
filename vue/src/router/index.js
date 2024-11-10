@@ -61,6 +61,14 @@ const routes = [
     meta: {
       hideSidebar: true
     }
+  },
+  {
+    path: "/new-task",
+    component: TaskForm,
+    meta: {
+      requiresAuth: true,
+      hideSidebar: true
+    }
   }
 ];
 
