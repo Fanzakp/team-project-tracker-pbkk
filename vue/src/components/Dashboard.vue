@@ -7,6 +7,7 @@ import 'vue-cal/dist/vuecal.css';
 const router = useRouter();
 
 const projects = ref([]);
+const tasks = ref([]);
 const error = ref(null);
 
 const fetchProjects = async () => {
@@ -46,6 +47,52 @@ const fetchProjects = async () => {
   }
 };
 
+const fetchTasks = async () => {
+  error.value = null;
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    error.value = 'Not authenticated';
+    router.push('/login');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/tasks', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Fetched tasks:', data); // Debug log
+    tasks.value = data;
+  } catch (err) {
+    error.value = 'Error fetching tasks: ' + err.message;
+    console.error('Error fetching tasks:', err);
+  }
+};
+
+const filteredTasks = computed(() => {
+  if (!selectedProject.value) return [];
+
+  const statusMap = {
+    1: 'Not Started',
+    2: 'In Progress',
+    3: 'Finished'
+  };
+
+  return tasks.value.filter(task =>
+    task.status === statusMap[selectedProject.value.id]
+  );
+});
+
 // Add function to handle project editing
 const editProject = (projectId) => {
   router.push(`/edit-project/${projectId}`);
@@ -55,16 +102,19 @@ onMounted(() => {
   if (selectedMenu.value === 'projects') {
     fetchProjects();
   }
+  if (selectedMenu.value === 'status' && 'todaysTasks') {
+    fetchTasks();
+  }
 });
 
 const status = ref([
-  { id: 1, name: 'Not Started', description: 'status that has not been started yet', tasks: [
+  { id: 1, name: 'Not Started', description: 'Projects that has not been started yet', tasks: [
 
   ]},
-  { id: 2, name: 'In Progress', description: 'In progress project that needed updates', tasks: [
+  { id: 2, name: 'In Progress', description: 'In progress projects that needed updates', tasks: [
 
   ]},
-  { id: 3, name: 'Finished', description: 'Finished status will showed here', tasks: [
+  { id: 3, name: 'Finished', description: 'Finished projects will showed here', tasks: [
 
   ]},
 ]);
@@ -72,17 +122,55 @@ const status = ref([
 const selectedProjectId = ref(null);
 const selectedProject = computed(() => status.value.find(project => project.id === selectedProjectId.value));
 
-const selectProject = (projectId) => {
-  selectedProjectId.value = projectId;
+const isLoading = ref(false);
+
+const selectProject = async (projectId) => {
+  isLoading.value = true;
+  try {
+    selectedProjectId.value = projectId;
+    await fetchProjects();
+    await fetchTasks();
+  } catch (err) {
+    console.error('Error loading data:', err);
+  } finally {
+    isLoading.value = false;
+  }
 };
+
+const tasksWithProjectNames = computed(() => {
+  console.log('Projects:', projects.value);
+  console.log('Filtered Tasks:', filteredTasks.value);
+  return filteredTasks.value.map(task => {
+    const project = projects.value.find(p => p.id === task.projectId);
+    console.log('Task:', task, 'Found Project:', project);
+    return {
+      ...task,
+      projectName: project ? project.name : 'Unknown Project'
+    };
+  });
+});
 
 const addTask = () => {
   router.push('/new-task');
 };
 
 const todaysTasks = computed(() => {
-  const today = new Date().toISOString().split('T')[0];
-  return selectedProject.value ? selectedProject.value.tasks.filter(task => task.date === today) : [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return tasks.value
+    .filter(task => {
+      const taskDate = new Date(task.taskDue);
+      taskDate.setHours(0, 0, 0, 0);
+      return taskDate.getTime() === today.getTime();
+    })
+    .map(task => {
+      const project = projects.value.find(p => p.id === task.projectId);
+      return {
+        ...task,
+        projectName: project ? project.name : 'Unknown Project'
+      };
+    });
 });
 
 const selectedMenu = ref('status');
@@ -92,6 +180,38 @@ const selectMenu = (menu) => {
   selectedMenu.value = menu;
   if (menu === 'projects') {
     fetchProjects();
+  }
+};
+
+const statusOptions = [
+  'Not Started',
+  'In Progress',
+  'Finished'
+];
+
+const updateTaskStatus = async (taskId, newStatus) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: newStatus
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update task status');
+    }
+
+    // Refresh tasks after update
+    await fetchTasks();
+  } catch (err) {
+    console.error('Error updating task status:', err);
+    error.value = 'Failed to update task status';
   }
 };
 
@@ -110,6 +230,11 @@ const todayDate = computed(() => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date().toLocaleDateString(undefined, options);
 });
+
+const formatDate = (date) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(date).toLocaleDateString(undefined, options);
+};
 </script>
 
 <template>
@@ -141,18 +266,44 @@ const todayDate = computed(() => {
         <table>
           <thead>
             <tr>
-              <th>Title</th>
+              <th>Name</th>
+              <th>Project Name</th>
               <th>Description</th>
+              <th>Status</th>
+              <th>Due Date</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="task in selectedProject.tasks" :key="task.id">
-              <td>{{ task.title }}</td>
+            <tr v-for="task in tasksWithProjectNames" :key="task.id">
+              <td>{{ task.name }}</td>
+              <td>{{ task.projectName }}</td>
               <td>{{ task.description }}</td>
+              <td>
+                <select
+                  v-model="task.status"
+                  @change="updateTaskStatus(task.id, task.status)"
+                  class="status-select"
+                >
+                  <option
+                    v-for="status in statusOptions"
+                    :key="status"
+                    :value="status"
+                  >
+                    {{ status }}
+                  </option>
+                </select>
+              </td>
+              <td>{{ formatDate(task.taskDue) }}</td>
+              <td>
+                <button @click="editProject(task.id)" class="btn-edit">
+                  Edit
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
-        <button @click="addTask">Add New Task</button>
+        <button @click="addTask" class="btn-primary">Add New Task</button>
       </div>
       <div v-if="selectedMenu === 'status' && !selectedProject">
         <h1>{{ todayDate }}</h1>
@@ -200,9 +351,27 @@ const todayDate = computed(() => {
       </div>
       <div v-if="selectedMenu === 'todaysTasks'" class="today-section">
         <h2>Today's Tasks</h2>
-        <ul>
-          <li v-for="task in todaysTasks" :key="task.id">{{ task.title }}</li>
-        </ul>
+        <div v-if="todaysTasks.length === 0" class="no-tasks">
+          No tasks due today
+        </div>
+        <table v-else>
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th>Project</th>
+              <th>Status</th>
+              <th>Due Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="task in todaysTasks" :key="task.id">
+              <td>{{ task.name }}</td>
+              <td>{{ task.projectName }}</td>
+              <td>{{ task.status }}</td>
+              <td>{{ formatDate(task.taskDue) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </main>
   </div>
@@ -277,9 +446,9 @@ const todayDate = computed(() => {
 }
 
 .main-content {
-  flex: 1;
+  overflow-x: auto; /* Allow horizontal scroll if table is too wide */
   padding: 2rem;
-  margin-left: 250px; /* Add left margin to account for sidebar width */
+  margin-left: 250px;
 }
 
 .main-content h1 {
@@ -295,6 +464,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1rem;
+  min-width: 900px; /* Set minimum width for the table */
 }
 
 table, th, td {
@@ -302,8 +472,20 @@ table, th, td {
 }
 
 th, td {
-  padding: 0.5rem;
+  padding: 1rem;
   text-align: left;
+  min-width: 120px; /* Set minimum width for columns */
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  min-width: 200px; /* Wider column for status dropdown */
+}
+
+/* Make description column flexible */
+th:nth-child(3),
+td:nth-child(3) {
+  width: 15%; /* Description takes 30% of table width */
 }
 
 button {
@@ -381,5 +563,34 @@ button:hover {
 
 .today-section {
   margin-top: 2rem;
+}
+
+.status-select {
+  width: 100%;
+  min-width: 140px;
+  padding: 0.5rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #333;
+  color: white;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #007BFF;
+}
+
+.btn-edit {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.btn-edit:hover {
+  background-color: #5a6268;
 }
 </style>
