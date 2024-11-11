@@ -140,6 +140,9 @@ const selectedTaskId = ref(null);
 const selectedTaskDetails = ref(null);
 const newComment = ref('');
 const taskComments = ref([]);
+const showProjectDetails = ref(false);
+const selectedProjectDetails = ref(null);
+const projectTasks = ref([]);
 
 const toggleTaskSelection = (taskId) => {
   const index = selectedTasks.value.indexOf(taskId);
@@ -340,6 +343,19 @@ const closeTaskDetails = () => {
   newComment.value = '';
 };
 
+const openProjectDetails = async (projectId) => {
+  const project = projects.value.find(p => p.id === projectId);
+  selectedProjectDetails.value = project;
+  projectTasks.value = tasks.value.filter(task => task.projectId === projectId);
+  showProjectDetails.value = true;
+};
+
+const closeProjectDetails = () => {
+  showProjectDetails.value = false;
+  selectedProjectDetails.value = null;
+  projectTasks.value = [];
+};
+
 const fetchComments = async (taskId) => {
   try {
     const token = localStorage.getItem('token');
@@ -523,7 +539,7 @@ const formatDate = (date) => {
       <div v-if="selectedMenu === 'projects'" class="projects-section">
         <div class="header-actions">
           <h2>Projects</h2>
-
+          <button @click="addProject" class="btn-primary">Add New Project</button>
         </div>
 
         <table class="projects-table">
@@ -549,9 +565,8 @@ const formatDate = (date) => {
               <td>{{ project.description }}</td>
               <td>{{ new Date(project.projectDue).toLocaleDateString() }}</td>
               <td>
-                <button @click="editProject(project.id)" class="btn-secondary">
-                  Edit
-                </button>
+                <button @click="editProject(project.id)" class="btn-secondary">Edit</button>
+                <button @click="openProjectDetails(project.id)" class="btn-details">Details</button>
               </td>
             </tr>
           </tbody>
@@ -562,6 +577,45 @@ const formatDate = (date) => {
           class="btn-delete">
           Delete
         </button>
+      </div>
+      <!-- Add this after your projects table -->
+      <div v-if="showProjectDetails" class="modal">
+        <div class="modal-content">
+          <span class="close" @click="closeProjectDetails">&times;</span>
+          <div v-if="selectedProjectDetails" class="project-details">
+            <h2>Project Details</h2>
+            <p><strong>Name:</strong> {{ selectedProjectDetails.name }}</p>
+            <p><strong>Description:</strong> {{ selectedProjectDetails.description }}</p>
+            <p><strong>Due Date:</strong> {{ formatDate(selectedProjectDetails.projectDue) }}</p>
+
+            <div class="related-tasks">
+              <h3>Related Tasks</h3>
+              <div v-if="projectTasks.length === 0" class="no-tasks">
+                No tasks found for this project
+              </div>
+              <table v-else>
+                <thead>
+                  <tr>
+                    <th>Task Name</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="task in projectTasks" :key="task.id">
+                    <td>{{ task.name }}</td>
+                    <td>
+                      <span :class="`status-badge status-${task.status.toLowerCase().replace(/\s+/g, '-')}`">
+                        {{ task.status }}
+                      </span>
+                    </td>
+                    <td>{{ formatDate(task.taskDue) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
       <div v-if="selectedMenu === 'calendar'" class="calendar-section">
         <h2>Calendar</h2>
@@ -965,7 +1019,7 @@ button:hover {
   padding: 2rem;
   border-radius: 8px;
   width: 90%;
-  max-width: 600px;
+  max-width: 600px;  /* Fixed width for modal */
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
@@ -1024,10 +1078,74 @@ button:hover {
   color: #fff;
 }
 
+.project-details {
+  color: #fff;
+}
+
+.project-details p {
+  white-space: normal;
+  word-break: break-word;
+  margin-bottom: 1rem;
+}
+
+.related-tasks {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.related-tasks table {
+  width: 100%;  /* Take full width of parent */
+  margin-top: 1rem;
+  border-collapse: collapse;
+  min-width: 0;  /* Override the min-width from other tables */
+  table-layout: fixed;  /* Fixed table layout */
+}
+
+.related-tasks th,
+.related-tasks td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #444;
+  white-space: normal;  /* Allow text wrapping */
+  word-wrap: break-word;  /* Break long words */
+  overflow-wrap: break-word;
+}
+
+/* Set column widths */
+.related-tasks th:nth-child(1),
+.related-tasks td:nth-child(1) {
+  width: 25%;  /* Task name column */
+}
+
+.related-tasks th:nth-child(2),
+.related-tasks td:nth-child(2) {
+  width: 30%;  /* Status column */
+}
+
+.related-tasks th:nth-child(3),
+.related-tasks td:nth-child(3) {
+  width: 45%;  /* Due date column */
+}
+
+.no-tasks {
+  text-align: center;
+  padding: 1rem;
+  color: #999;
+  font-style: italic;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
 .btn-details {
   background-color: #28a745;
   color: white;
-  padding: 0.3rem 0.8rem;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -1041,7 +1159,7 @@ button:hover {
 .btn-edit {
   background-color: #6c757d;
   color: white;
-  padding: 0.3rem 0.8rem;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
