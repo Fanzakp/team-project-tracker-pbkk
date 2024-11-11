@@ -229,6 +229,10 @@ const addTask = () => {
   router.push('/new-task');
 };
 
+const addProject = () => {
+  router.push('/new-project');
+};
+
 const todaysTasks = computed(() => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
