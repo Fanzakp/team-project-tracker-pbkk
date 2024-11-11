@@ -1,6 +1,13 @@
 const { File, Task } = require("../models");
 const multer = require("multer");
+const fs = require('fs');
 const path = require("path");
+
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Konfigurasi multer untuk upload file
 const storage = multer.diskStorage({
@@ -12,35 +19,59 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+      fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 module.exports = {
   // Upload file ke task
   uploadFile: [
-    upload.single("file"),
-    async (req, res) => {
-      try {
-        const { taskId } = req.body;
+      upload.single('file'),
+      async (req, res) => {
+          try {
+              if (!req.file) {
+                  return res.status(400).json({ message: "No file uploaded" });
+              }
 
-        // Memeriksa apakah task ada
-        const task = await Task.findByPk(taskId);
-        if (!task) {
-          return res.status(404).json({ message: "Tugas tidak ditemukan" });
-        }
+              const { taskId } = req.body;
+              
+              // Validate taskId
+              if (!taskId) {
+                  return res.status(400).json({ message: "Task ID is required" });
+              }
 
-        const file = await File.create({
-          name: req.file.filename,
-          path: req.file.path,
-          taskId,
-        });
+              // Check if task exists
+              const task = await Task.findByPk(taskId);
+              if (!task) {
+                  return res.status(404).json({ message: "Task not found" });
+              }
 
-        res.status(201).json({ message: "File berhasil diupload", file });
-      } catch (error) {
-        res
-          .status(400)
-          .json({ message: "Gagal mengupload file", error: error.message });
+              // Create file record
+              const file = await File.create({
+                  name: req.file.originalname,
+                  path: req.file.path,
+                  taskId: taskId
+              });
+
+              res.status(201).json({ 
+                  message: "File uploaded successfully",
+                  file: {
+                      id: file.id,
+                      name: file.name,
+                      path: file.path
+                  }
+              });
+          } catch (error) {
+              console.error('File upload error:', error);
+              res.status(500).json({ 
+                  message: "Failed to upload file", 
+                  error: error.message 
+              });
+          }
       }
-    },
   ],
 
   // Mendapatkan file berdasarkan ID

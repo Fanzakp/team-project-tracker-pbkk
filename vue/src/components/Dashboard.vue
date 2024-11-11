@@ -80,6 +80,31 @@ const fetchTasks = async () => {
   }
 };
 
+// Add this function to your script section
+const fetchTask = async (taskId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch task');
+
+    const data = await response.json();
+    // Update selected task details after file upload
+    selectedTaskDetails.value = {
+      ...data,
+      projectName: projects.value.find(p => p.id === data.projectId)?.name || 'Unknown Project'
+    };
+  } catch (err) {
+    console.error('Error fetching task:', err);
+    error.value = 'Failed to fetch task details';
+  }
+};
+
 const filteredTasks = computed(() => {
   if (!selectedProject.value) return [];
 
@@ -134,7 +159,6 @@ const selectedProject = computed(() => status.value.find(project => project.id =
 
 const selectedTasks = ref([]);
 const selectedProjects = ref([]);
-
 const showDetails = ref(false);
 const selectedTaskId = ref(null);
 const selectedTaskDetails = ref(null);
@@ -143,6 +167,9 @@ const taskComments = ref([]);
 const showProjectDetails = ref(false);
 const selectedProjectDetails = ref(null);
 const projectTasks = ref([]);
+const selectedFile = ref(null);
+const uploadError = ref(null);
+const taskFiles = ref([]);
 
 const toggleTaskSelection = (taskId) => {
   const index = selectedTasks.value.indexOf(taskId);
@@ -242,6 +269,97 @@ const addProject = () => {
   router.push('/new-project');
 };
 
+const fetchFiles = async (taskId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/tasks/${taskId}/files`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch files');
+    const data = await response.json();
+    taskFiles.value = data;
+  } catch (err) {
+    console.error('Error fetching files:', err);
+    error.value = 'Failed to fetch files';
+  }
+};
+
+const viewFile = async (fileId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/files/${fileId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch file');
+
+    // Create blob URL and open in new window
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    console.error('Error viewing file:', err);
+    error.value = 'Failed to view file';
+  }
+};
+
+const openTaskDetails = async (taskId) => {
+  selectedTaskId.value = taskId;
+  const task = tasksWithProjectNames.value.find(t => t.id === taskId);
+  selectedTaskDetails.value = task;
+  showDetails.value = true;
+  await Promise.all([
+    fetchComments(taskId),
+    fetchFiles(taskId)
+  ]);
+};
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('taskId', selectedTaskId.value);
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to upload file');
+    }
+
+    // Clear file input and error
+    selectedFile.value = null;
+    uploadError.value = null;
+
+    // Refresh task details and fetch updated files
+    if (selectedTaskId.value) {
+      await Promise.all([
+        fetchTask(selectedTaskId.value),
+        fetchFiles(selectedTaskId.value)
+      ]);
+    }
+  } catch (err) {
+    console.error('Error uploading file:', err);
+    uploadError.value = err.message || 'Failed to upload file';
+  }
+};
+
 const todaysTasks = computed(() => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -327,14 +445,6 @@ const calendarEvents = computed(() => {
 const dropdowns = ref({
   status: false,
 });
-
-const openTaskDetails = async (taskId) => {
-  selectedTaskId.value = taskId;
-  const task = tasksWithProjectNames.value.find(t => t.id === taskId);
-  selectedTaskDetails.value = task;
-  showDetails.value = true;
-  await fetchComments(taskId);
-};
 
 const closeTaskDetails = () => {
   showDetails.value = false;
@@ -456,7 +566,6 @@ const formatDate = (date) => {
               <th style="width: 30px">Select</th>
               <th>Name</th>
               <th>Project Name</th>
-              <th>Description</th>
               <th>Status</th>
               <th>Due Date</th>
               <th>Actions</th>
@@ -473,7 +582,6 @@ const formatDate = (date) => {
               </td>
               <td>{{ task.name }}</td>
               <td>{{ task.projectName }}</td>
-              <td>{{ task.description }}</td>
               <td>
                 <select
                   v-model="task.status"
@@ -515,6 +623,36 @@ const formatDate = (date) => {
             <p><strong>Due Date:</strong> {{ formatDate(selectedTaskDetails.taskDue) }}</p>
             <p><strong>Description:</strong> {{ selectedTaskDetails.description }}</p>
 
+            <div class="file-upload-section">
+              <h3>Files</h3>
+              <form @submit.prevent class="upload-form">
+                <div class="file-input-group">
+                  <input
+                    type="file"
+                    id="fileUpload"
+                    @change="handleFileUpload"
+                    ref="selectedFile"
+                    class="file-input"
+                  >
+                  <label for="fileUpload" class="file-label">Choose File</label>
+                </div>
+                <p v-if="uploadError" class="error-message">{{ uploadError }}</p>
+              </form>
+
+              <!-- Add file list -->
+              <div class="files-list">
+                <div v-if="taskFiles.length === 0" class="no-files">
+                  No files uploaded
+                </div>
+                <div v-else class="file-item" v-for="file in taskFiles" :key="file.id">
+                  <span class="file-name">{{ file.name }}</span>
+                  <button @click="viewFile(file.id)" class="btn-view">
+                    <i class="fas fa-eye"></i> <!-- Font Awesome eye icon -->
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="comments-section">
               <h3>Comments</h3>
               <div class="comments-list">
@@ -547,7 +685,6 @@ const formatDate = (date) => {
             <tr>
               <th style="width: 30px">Select</th>
               <th>Name</th>
-              <th>Description</th>
               <th>Due Date</th>
               <th>Actions</th>
             </tr>
@@ -562,7 +699,6 @@ const formatDate = (date) => {
                 >
               </td>
               <td>{{ project.name }}</td>
-              <td>{{ project.description }}</td>
               <td>{{ new Date(project.projectDue).toLocaleDateString() }}</td>
               <td>
                 <button @click="editProject(project.id)" class="btn-secondary">Edit</button>
@@ -769,8 +905,7 @@ th, td {
 
 th:nth-child(4),
 td:nth-child(4) {
-  width: 150px; /* Fixed width */
-  max-width: 150px; /* Ensure maximum width */
+  width: 200px; /* Fixed width */
   white-space: nowrap; /* Prevent text wrapping */
   overflow: hidden; /* Hide overflow */
   text-overflow: ellipsis; /* Add ellipsis for overflow */
@@ -1140,6 +1275,87 @@ button:hover {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.875rem;
+}
+
+.files-list {
+  margin-top: 1rem;
+}
+
+.no-files {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #444;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.file-name {
+  flex-grow: 1;
+  margin-right: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-view {
+  background-color: #17a2b8;
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.btn-view:hover {
+  background-color: #138496;
+}
+
+/* Optional: Add Font Awesome eye icon */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+.file-upload-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.upload-form {
+  margin: 1rem 0;
+}
+
+.file-input-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.file-label:hover {
+  background-color: #5a6268;
 }
 
 .btn-details {
