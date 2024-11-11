@@ -106,4 +106,31 @@ module.exports = {
         .json({ message: "Gagal menghapus file", error: error.message });
     }
   },
+
+  getFilesByTaskId: async (req, res) => {
+    try {
+      const { taskId } = req.params;
+  
+      // Check if task exists
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+  
+      // Get all files for this task with full details
+      const files = await File.findAll({
+        where: { taskId: taskId },
+        attributes: ['id', 'name', 'path', 'createdAt'], // Explicitly specify attributes
+        order: [['createdAt', 'DESC']] // Order by newest first
+      });
+  
+      res.status(200).json(files);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      res.status(500).json({ 
+        message: "Failed to fetch files", 
+        error: error.message 
+      });
+    }
+  }
 };

@@ -272,7 +272,7 @@ const addProject = () => {
 const fetchFiles = async (taskId) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/tasks/${taskId}/files`, {
+    const response = await fetch(`http://localhost:5000/api/files/task/${taskId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
@@ -281,6 +281,7 @@ const fetchFiles = async (taskId) => {
 
     if (!response.ok) throw new Error('Failed to fetch files');
     const data = await response.json();
+    console.log('Fetched files:', data); // Debug log
     taskFiles.value = data;
   } catch (err) {
     console.error('Error fetching files:', err);
@@ -314,10 +315,15 @@ const openTaskDetails = async (taskId) => {
   const task = tasksWithProjectNames.value.find(t => t.id === taskId);
   selectedTaskDetails.value = task;
   showDetails.value = true;
-  await Promise.all([
-    fetchComments(taskId),
-    fetchFiles(taskId)
-  ]);
+
+  try {
+    await Promise.all([
+      fetchComments(taskId),
+      fetchFiles(taskId)  // Make sure this is being called
+    ]);
+  } catch (err) {
+    console.error('Error loading task details:', err);
+  }
 };
 
 const handleFileUpload = async (event) => {
@@ -639,15 +645,14 @@ const formatDate = (date) => {
                 <p v-if="uploadError" class="error-message">{{ uploadError }}</p>
               </form>
 
-              <!-- Add file list -->
               <div class="files-list">
-                <div v-if="taskFiles.length === 0" class="no-files">
+                <div v-if="!taskFiles || taskFiles.length === 0" class="no-files">
                   No files uploaded
                 </div>
-                <div v-else class="file-item" v-for="file in taskFiles" :key="file.id">
+                <div v-else v-for="file in taskFiles" :key="file.id" class="file-item">
                   <span class="file-name">{{ file.name }}</span>
                   <button @click="viewFile(file.id)" class="btn-view">
-                    <i class="fas fa-eye"></i> <!-- Font Awesome eye icon -->
+                    <i class="fas fa-eye"></i>
                   </button>
                 </div>
               </div>
@@ -804,6 +809,9 @@ const formatDate = (date) => {
 </template>
 
 <style scoped>
+/* Optional: Add Font Awesome eye icon */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
 .dashboard {
   display: flex;
   height: calc(100vh - 3rem); /* Adjust height to account for navbar */
@@ -1321,9 +1329,6 @@ button:hover {
 .btn-view:hover {
   background-color: #138496;
 }
-
-/* Optional: Add Font Awesome eye icon */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 .file-upload-section {
   margin-top: 2rem;
