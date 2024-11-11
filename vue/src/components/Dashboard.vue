@@ -135,6 +135,12 @@ const selectedProject = computed(() => status.value.find(project => project.id =
 const selectedTasks = ref([]);
 const selectedProjects = ref([]);
 
+const showDetails = ref(false);
+const selectedTaskId = ref(null);
+const selectedTaskDetails = ref(null);
+const newComment = ref('');
+const taskComments = ref([]);
+
 const toggleTaskSelection = (taskId) => {
   const index = selectedTasks.value.indexOf(taskId);
   if (index === -1) {
@@ -319,6 +325,68 @@ const dropdowns = ref({
   status: false,
 });
 
+const openTaskDetails = async (taskId) => {
+  selectedTaskId.value = taskId;
+  const task = tasksWithProjectNames.value.find(t => t.id === taskId);
+  selectedTaskDetails.value = task;
+  showDetails.value = true;
+  await fetchComments(taskId);
+};
+
+const closeTaskDetails = () => {
+  showDetails.value = false;
+  selectedTaskId.value = null;
+  selectedTaskDetails.value = null;
+  newComment.value = '';
+};
+
+const fetchComments = async (taskId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/comments/task/${taskId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch comments');
+    const data = await response.json();
+    taskComments.value = data;
+  } catch (err) {
+    console.error('Error fetching comments:', err);
+    error.value = 'Failed to fetch comments';
+  }
+};
+
+const addComment = async () => {
+  if (!newComment.value.trim()) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/comments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        taskId: selectedTaskId.value,
+        commentText: newComment.value
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to add comment');
+
+    // Refresh comments after adding new one
+    await fetchComments(selectedTaskId.value);
+    newComment.value = ''; // Clear input
+  } catch (err) {
+    console.error('Error adding comment:', err);
+    error.value = 'Failed to add comment';
+  }
+};
+
 const toggleDropdown = (menu) => {
   dropdowns.value[menu] = !dropdowns.value[menu];
   if (menu === 'status') {
@@ -407,9 +475,8 @@ const formatDate = (date) => {
               </td>
               <td>{{ formatDate(task.taskDue) }}</td>
               <td>
-                <button @click="editTask(task.id)" class="btn-edit">
-                  Edit
-                </button>
+                <button @click="editTask(task.id)" class="btn-edit">Edit</button>
+                <button @click="openTaskDetails(task.id)" class="btn-details">Details</button>
               </td>
             </tr>
           </tbody>
@@ -421,14 +488,42 @@ const formatDate = (date) => {
           Delete
         </button>
       </div>
-      <div v-if="selectedMenu === 'status' && !selectedProject">
-        <h1>{{ todayDate }}</h1>
-        <p>Select a project from the dropdown to view details.</p>
+      <div v-if="showDetails" class="modal">
+        <div class="modal-content">
+          <span class="close" @click="closeTaskDetails">&times;</span>
+          <div v-if="selectedTaskDetails" class="task-details">
+            <h2>Task Details</h2>
+            <p><strong>Name:</strong> {{ selectedTaskDetails.name }}</p>
+            <p><strong>Project:</strong> {{ selectedTaskDetails.projectName }}</p>
+            <p><strong>Status:</strong> {{ selectedTaskDetails.status }}</p>
+            <p><strong>Due Date:</strong> {{ formatDate(selectedTaskDetails.taskDue) }}</p>
+            <p><strong>Description:</strong> {{ selectedTaskDetails.description }}</p>
+
+            <div class="comments-section">
+              <h3>Comments</h3>
+              <div class="comments-list">
+                <div v-for="comment in taskComments" :key="comment.id" class="comment">
+                  <p class="comment-text">{{ comment.commentText }}</p>
+                  <small class="comment-meta">Posted on {{ formatDate(comment.createdAt) }}</small>
+                </div>
+              </div>
+
+              <div class="add-comment">
+                <textarea
+                  v-model="newComment"
+                  placeholder="Add a comment..."
+                  rows="3"
+                ></textarea>
+                <button @click="addComment" class="btn-primary">Add Comment</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div v-if="selectedMenu === 'projects'" class="projects-section">
         <div class="header-actions">
           <h2>Projects</h2>
-          <button @click="addProject" class="btn-primary">Add New Project</button>
+
         </div>
 
         <table class="projects-table">
@@ -620,17 +715,30 @@ th, td {
 
 th:nth-child(4),
 td:nth-child(4) {
-  min-width: 150px; /* Wider column for status dropdown */
+  width: 150px; /* Fixed width */
+  max-width: 150px; /* Ensure maximum width */
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Add ellipsis for overflow */
 }
+
+/* Add tooltip on hover (optional) */
+td:nth-child(4):hover {
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+  position: relative;
+}
+
 th:nth-child(5),
 td:nth-child(5) {
-  min-width: 180px; /* Wider column for status dropdown */
+  min-width: 150px; /* Wider column for status dropdown */
 }
 
 /* Make description column flexible */
 th:nth-child(3),
 td:nth-child(3) {
-  width: 15%; /* Description takes 30% of table width */
+  width: 10%; /* Description takes 30% of table width */
 }
 
 button {
@@ -837,6 +945,97 @@ button:hover {
 .status-select:focus {
   outline: none;
   border-color: #007BFF;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #333;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #fff;
+}
+
+.task-details {
+  color: #fff;
+}
+
+.task-details p {
+  white-space: normal; /* Allow text wrapping in modal */
+  word-break: break-word;
+}
+
+.comments-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.comments-list {
+  margin: 1rem 0;
+}
+
+.comment {
+  background-color: #444;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.comment-text {
+  margin-bottom: 0.5rem;
+}
+
+.comment-meta {
+  color: #999;
+}
+
+.add-comment textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  background-color: #444;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.btn-details {
+  background-color: #28a745;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.btn-details:hover {
+  background-color: #218838;
 }
 
 .btn-edit {

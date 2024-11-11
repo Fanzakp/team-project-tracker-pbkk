@@ -33,17 +33,7 @@ module.exports = {
   // Mendapatkan semua project (hanya untuk admin)
   getAllProjects: async (req, res) => {
     try {
-      if (!req.user.isAdmin) {
-        return res
-          .status(403)
-          .json({
-            message: "Akses ditolak. Hanya admin yang dapat melihat proyek.",
-          });
-      }
-
-      const projects = await Project.findAll({
-        where: { adminId: req.user.id },
-      });
+      const projects = await Project.findAll();
       res.status(200).json(projects);
     } catch (error) {
       res
@@ -55,14 +45,6 @@ module.exports = {
   // Mendapatkan project berdasarkan ID (hanya untuk admin)
   getProjectById: async (req, res) => {
     try {
-      if (!req.user.isAdmin) {
-        return res
-          .status(403)
-          .json({
-            message: "Akses ditolak. Hanya admin yang dapat melihat proyek.",
-          });
-      }
-
       const { id } = req.params;
       const project = await Project.findOne({
         where: { id, adminId: req.user.id },
