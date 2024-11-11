@@ -128,17 +128,18 @@ const editTask = (taskId) => {
 };
 
 
+// Update the onMounted function
 onMounted(() => {
-  if (selectedMenu.value === 'projects') {
-    fetchProjects();
-  }
-  if (selectedMenu.value === 'status' && 'todaysTasks') {
-    fetchTasks();
-  }
-  if (selectedMenu.value === 'calendar') {
-    fetchProjects();
-    fetchTasks();
-  }
+  // Fetch both projects and tasks when component mounts
+  Promise.all([
+    fetchProjects(),
+    fetchTasks()
+  ]).then(() => {
+    // Tasks and projects are now loaded for today's tasks view
+    console.log('Initial data loaded');
+  }).catch(err => {
+    console.error('Error loading initial data:', err);
+  });
 });
 
 const status = ref([
@@ -398,16 +399,18 @@ const todaysTasks = computed(() => {
     });
 });
 
-const selectedMenu = ref('status');
+const selectedMenu = ref('todaysTasks'); // Change from 'status' to 'todaysTasks'
 
 // Update selectMenu to fetch projects when projects menu is selected
 const selectMenu = (menu) => {
   selectedMenu.value = menu;
   if (menu === 'projects') {
     fetchProjects();
-  } else if (menu === 'calendar') {
-    fetchProjects();
-    fetchTasks();
+  } else if (menu === 'calendar' || menu === 'todaysTasks') {
+    Promise.all([
+      fetchProjects(),
+      fetchTasks()
+    ]);
   }
 };
 
