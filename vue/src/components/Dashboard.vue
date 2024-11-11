@@ -8,7 +8,6 @@ const router = useRouter();
 
 const projects = ref([]);
 const tasks = ref([]);
-const appointments = ref([]);
 const error = ref(null);
 
 const fetchProjects = async () => {
@@ -170,6 +169,8 @@ const projectTasks = ref([]);
 const selectedFile = ref(null);
 const uploadError = ref(null);
 const taskFiles = ref([]);
+const showPhotoViewer = ref(false);
+const currentPhotoUrl = ref('');
 
 const toggleTaskSelection = (taskId) => {
   const index = selectedTasks.value.indexOf(taskId);
@@ -300,14 +301,26 @@ const viewFile = async (fileId) => {
 
     if (!response.ok) throw new Error('Failed to fetch file');
 
-    // Create blob URL and open in new window
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    // Check if file is an image
+    if (blob.type.startsWith('image/')) {
+      const url = window.URL.createObjectURL(blob);
+      currentPhotoUrl.value = url;
+      showPhotoViewer.value = true;
+    } else {
+      // For non-image files, open in new window
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
   } catch (err) {
     console.error('Error viewing file:', err);
     error.value = 'Failed to view file';
   }
+};
+
+const closePhotoViewer = () => {
+  showPhotoViewer.value = false;
+  currentPhotoUrl.value = '';
 };
 
 const openTaskDetails = async (taskId) => {
@@ -674,6 +687,13 @@ const formatDate = (date) => {
                   rows="3"
                 ></textarea>
                 <button @click="addComment" class="btn-primary">Add Comment</button>
+              </div>
+            </div>
+
+            <div v-if="showPhotoViewer" class="photo-modal" @click.self="closePhotoViewer">
+              <div class="photo-content">
+                <span class="close" @click="closePhotoViewer">&times;</span>
+                <img :src="currentPhotoUrl" alt="File preview" class="photo-preview">
               </div>
             </div>
           </div>
@@ -1361,6 +1381,60 @@ button:hover {
 
 .file-label:hover {
   background-color: #5a6268;
+}
+
+.photo-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  backdrop-filter: blur(5px);
+}
+
+.photo-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+  background-color: #333;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.photo-preview {
+  max-width: 100%;
+  max-height: calc(90vh - 2rem);
+  border-radius: 8px;
+  display: block;
+}
+
+.photo-content .close {
+  position: absolute;
+  right: -1rem;
+  top: -1rem;
+  width: 2rem;
+  height: 2rem;
+  background-color: #dc3545;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 1.2rem;
+  border: 2px solid #333;
+  transition: all 0.2s ease;
+}
+
+.photo-content .close:hover {
+  background-color: #c82333;
+  transform: scale(1.1);
 }
 
 .btn-details {
